@@ -29,8 +29,8 @@
       <td style="text-align: center; vertical-align: middle;">{{ pedido.cliente.nome }}</td>
       <td style="text-align: center; vertical-align: middle;">{{ pedido.data_pedidof }}</td>
       <td style="text-align: center; vertical-align: middle;">{{ pedido.get_status_display }}</td>
-      <td style="text-align: center; vertical-align: middle;">?</td>
-      <td style="text-align: center; vertical-align: middle;">?</td>
+      <td style="text-align: center; vertical-align: middle;">{{ pedido.qtdeItens }}</td>
+      <td style="text-align: center; vertical-align: middle;">{{ pedido.total }}</td>
       <td>
         <button type="button" class="btn btn-info"
           onclick="location.href='{% url 'detalhes_pedido' pedido.id%}'">Detalhes</button>

@@ -77,6 +77,15 @@ class Pedido(models.Model):
         if self.data_pedido:
             return self.data_pedido.strftime('%d/%m/%Y %H:%M')
         return None
+    
+    @property 
+    def total(self):
+        total = sum(item.qtde * item.preco for item in self.itempedido_set.all())
+        return total
+    
+    @property
+    def qtdeItens(self):
+        return self.itempedido_set.count()
 
 class ItemPedido(models.Model):
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
@@ -87,3 +96,64 @@ class ItemPedido(models.Model):
 
     def __str__(self):
         return f"{self.produto.nome} (Qtd: {self.qtde}) - Preço Unitário: {self.preco}"  
+
+    @property
+    def calculoTotal(self):
+        total = self.qtde * self.preco
+        return total
+
+    @property
+    def total(self):
+        total = sum(item.qtde * item.preco for item in self.itempedido_set.all())
+        return total
+    
+class Pagamento(models.Model):
+    DINHEIRO = 1
+    CARTAO = 2
+    PIX = 3
+    OUTRA = 4
+
+
+    FORMA_CHOICES = [
+        (DINHEIRO, 'Dinheiro'),
+        (CARTAO, 'Cartão'),
+        (PIX, 'Pix'),
+        (OUTRA, 'Outra'),
+    ]
+
+
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
+    forma = models.IntegerField(choices=FORMA_CHOICES)
+    valor = models.DecimalField(max_digits=10, decimal_places=2,blank=False)
+    data_pgto = models.DateTimeField(auto_now_add=True)
+    
+    @property
+    def data_pgtof(self):
+        """Retorna a data no formato DD/MM/AAAA HH:MM"""
+        if self.data_pgto:
+            return self.data_pgto.strftime('%d/%m/%Y %H:%M')
+        return None
+    
+  
+# lista de todos os pagamentos realiados
+    @property
+    def pagamentos(self):
+        return Pagamento.objects.filter(pedido=self)    
+    
+    #Calcula o total de todos os pagamentos do pedido
+    @property
+    def total_pago(self):
+        total = sum(pagamento.valor for pagamento in self.pagamentos.all())
+        return total    
+    
+    @property
+    def debito(self):
+        # Calcula o débito (valor total do pedido - total pago)
+        total_pago = self.total_pago  # Pega o total pago através do método já existente
+        debito = self.valor_total - total_pago
+        
+        # Retorna 0 se o débito for negativo (pagamento já superior ao valor do pedido)
+        if debito < 0:
+            debito = 0.0
+        
+        return debito
