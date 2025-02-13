@@ -86,6 +86,20 @@ class Pedido(models.Model):
     @property
     def qtdeItens(self):
         return self.itempedido_set.count()
+    
+    @property
+    def pagamentos(self):
+        return Pagamento.objects.filter(pedido=self)
+
+    @property
+    def total_pago(self):
+        total = sum(pagamento.valor for pagamento in self.pagamentos.all())
+        return total
+    
+    @property
+    def debito(self):
+        valor_debito = self.total - self.total_pago 
+        return valor_debito
 
 class ItemPedido(models.Model):
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
@@ -135,25 +149,3 @@ class Pagamento(models.Model):
         return None
     
   
-# lista de todos os pagamentos realiados
-    @property
-    def pagamentos(self):
-        return Pagamento.objects.filter(pedido=self)    
-    
-    #Calcula o total de todos os pagamentos do pedido
-    @property
-    def total_pago(self):
-        total = sum(pagamento.valor for pagamento in self.pagamentos.all())
-        return total    
-    
-    @property
-    def debito(self):
-        # Calcula o débito (valor total do pedido - total pago)
-        total_pago = self.total_pago  # Pega o total pago através do método já existente
-        debito = self.valor_total - total_pago
-        
-        # Retorna 0 se o débito for negativo (pagamento já superior ao valor do pedido)
-        if debito < 0:
-            debito = 0.0
-        
-        return debito
