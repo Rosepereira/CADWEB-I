@@ -7,6 +7,7 @@ from datetime import date
 from django.http import JsonResponse
 from django.apps import apps
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 
 #from .models import Categoria
 @login_required
@@ -456,6 +457,37 @@ def form_pagamento(request,id):
     return render(request, 'pedido/pagamento.html',contexto)
 
 @login_required
+def editar_pagamento(request, id):
+    try:
+        pagamento = Pagamento.objects.get(pk=id)
+        pedido = pagamento.pedido
+        quantidade_anterior_paga = pagamento.valor  # Armazena a quantidade anterior
+    except:
+        messages.error(request, 'Registro não encontrado')
+        return redirect('form_pagamento', id=pagamento.pedido.id)
+
+    if (request.method == 'POST'):
+        form = PagamentoForm(request.POST, instance=pagamento)
+        if form.is_valid():
+            pagamento_atual = pedido.total
+            print(f'soma: {pagamento_atual}')
+
+            pagamento_atual = pagamento_atual - pagamento.valor
+
+            print(f'Final: {pagamento_atual}')
+            form.save()
+            messages.success(request, "Pagamento atualizado com sucesso!")
+            return redirect('form_pagamento', id=pedido.id)
+            # return render(request, 'produto/lista.html', {'listaProduto':listaProduto,})
+        else:
+            messages.success(request, "Pagamento atualizado com sucesso!")
+
+    else: 
+        form = PagamentoForm(instance=pagamento)
+    
+    return render(request, 'pedido/pagamento.html', {'form':form, 'pedido':pedido})
+
+@login_required
 def remover_pagamento(request, id):
     try:
         pagamento = Pagamento.objects.get(pk=id)
@@ -467,3 +499,14 @@ def remover_pagamento(request, id):
         return redirect('form_pagamento', id=pagamento_id)
     
     return redirect('form_pagamento', id=pagamento_id)
+
+@login_required(login_url='login')
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+@login_required
+def nota_fiscal(request, pedido_id):  # Nome do parâmetro deve bater com a URL
+    pedido = get_object_or_404(Pedido, id=pedido_id)  # Busca o pedido ou retorna 404
+    Item_pedido = pedido.itempedido_set.all()  # Pega todos os itens do pedido
+    return render(request, 'pedido/notaFiscal.html', {'pedido': pedido, 'itens':Item_pedido})

@@ -1,6 +1,8 @@
 import locale
 from django.db import models
 locale
+import hashlib
+from decimal import Decimal, ROUND_HALF_UP
 
 class Categoria(models.Model):
     nome = models.CharField(max_length=100)
@@ -100,6 +102,64 @@ class Pedido(models.Model):
     def debito(self):
         valor_debito = self.total - self.total_pago 
         return valor_debito
+    
+    @property
+    def data_pedido_key(self):
+        if self.data_pedido:
+            return self.data_pedido.strftime('%Y%m%d')
+        return None
+    
+    @property
+    def chave_acesso(self):
+        # Combina o ID do pedido e a data formatada
+        if self.id and self.data_pedido_key:
+            dados_comb = f"{self.id}{self.data_pedido_key}"
+        
+            # Cria o hash com sha256
+            sha256 = hashlib.sha256()
+            sha256.update(dados_comb.encode('utf-8'))  # Codificando a string para bytes
+            key_final = f"{self.data_pedido_key}{self.id}{sha256.hexdigest()}"
+            
+            # Remove caracteres não numéricos
+            key_final_numerico = ''.join(filter(str.isdigit, key_final))
+            return key_final_numerico  # Retorna a chave de acesso contendo apenas números
+        return None
+
+    @property
+    def calculoICMS(self):
+        icms = Decimal('0.18')
+        calculo = (self.total * icms).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        print(f"TOTAL: {self.total}")
+        return calculo
+    
+    @property
+    def calculoIPI(self):
+        ipi = Decimal('0.05')
+        calculo = (self.total * ipi).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return calculo
+    
+    @property
+    def calculoPIS(self):
+        pis = Decimal('0.0165')
+        calculo = (self.total * pis).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return calculo
+
+    @property
+    def calculoCONFINS(self):
+        confins = Decimal('0.076')
+        calculo = (self.total * confins).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return calculo
+    
+    @property
+    def total_impostos(self):
+        soma_impostos = (self.calculoICMS + self.calculoIPI + self.calculoPIS + self.calculoCONFINS).quantize(Decimal('0.010'), rounding=ROUND_HALF_UP)
+        return soma_impostos
+    
+    @property
+    def valor_final(self):
+        valor = (self.total + self.total_impostos).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return valor
+
 
 class ItemPedido(models.Model):
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
